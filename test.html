@@ -85,9 +85,50 @@
         }
         
         function printTest(printerName) {
-            const content = "Test print from printer service\n" + 
-                           "Date: " + new Date().toLocaleString() + "\n" +
-                           "Printer: " + printerName;
+            // Create a professional POS bill format
+            const now = new Date();
+            const date = now.toLocaleDateString();
+            const time = now.toLocaleTimeString();
+            const billNo = 'BILL-' + Date.now().toString().slice(-6);
+            
+            const content = 
+`========================================
+           RESTAURANT RECEIPT
+========================================
+Date: ${date}                Time: ${time}
+Bill No: ${billNo}          Table: 05
+Cashier: John Smith         Terminal: ${printerName}
+----------------------------------------
+ITEM                  QTY   RATE  AMOUNT
+----------------------------------------
+1. Margherita Pizza    1   $12.99  $12.99
+2. Caesar Salad        1    $8.50   $8.50
+3. Chicken Wings       2    $7.25  $14.50
+4. Garlic Bread        1    $4.99   $4.99
+5. Coca Cola           3    $2.50   $7.50
+6. Beef Burger         1   $15.99  $15.99
+7. French Fries        2    $3.99   $7.98
+8. Chocolate Cake      1    $6.50   $6.50
+9. Iced Coffee         2    $3.75   $7.50
+10. Fish & Chips       1   $13.99  $13.99
+----------------------------------------
+SUBTOTAL                           $100.44
+Tax (8.5%)                          $8.54
+Service Charge (10%)               $10.04
+----------------------------------------
+TOTAL AMOUNT                      $119.02
+----------------------------------------
+PAYMENT METHOD: CASH
+CASH RECEIVED:                    $120.00
+CHANGE:                             $0.98
+----------------------------------------
+        ⭐ THANK YOU FOR VISITING! ⭐
+         Visit us again soon!
+      Follow us @restaurant_social
+========================================
+    Customer Copy - Please keep this
+         receipt for your records
+========================================`;
             
             const printJob = {
                 printerName: printerName,

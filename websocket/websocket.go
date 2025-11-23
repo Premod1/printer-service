@@ -93,6 +93,7 @@ func (c *Client) writePump() {
 }
 
 func (c *Client) handleMessage(msg Message) {
+	fmt.Printf("Received message: %s\n", msg.Type)
 	switch msg.Type {
 	case "get_printers":
 		c.sendPrinters()
