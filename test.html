@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Printer Client</title>
+</head>
+<body>
+    <div id="app">
+        <h1>Printer Service</h1>
+        <button onclick="getPrinters()">Get Printers</button>
+        <div id="printers"></div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        
+        function connect() {
+            ws = new WebSocket('ws://localhost:8081/ws');
+            
+            ws.onopen = function() {
+                console.log('Connected to printer service');
+                document.getElementById('status').innerHTML = 'Connected';
+            };
+            
+            ws.onmessage = function(event) {
+                console.log('Raw message received:', event.data);
+                let data;
+                try {
+                    data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                } catch (e) {
+                    console.error('Failed to parse message:', e, event.data);
+                    return;
+                }
+                handleMessage(data);
+            };
+            
+            ws.onclose = function() {
+                console.log('Disconnected');
+                document.getElementById('status').innerHTML = 'Disconnected';
+                // Attempt to reconnect after 3 seconds
+                setTimeout(connect, 3000);
+            };
+        }
+        
+        function handleMessage(msg) {
+            console.log('Handling message:', msg);
+            switch(msg.type) {
+                case 'printers_list':
+                    // Payload is already an array of printer objects
+                    displayPrinters(msg.payload);
+                    break;
+                case 'print_success':
+                    // Payload is already an object with jobId
+                    alert('Print job completed: ' + msg.payload.jobId);
+                    break;
+                case 'error':
+                    // Payload is already an object with message
+                    alert('Error: ' + msg.payload.message);
+                    break;
+                default:
+                    console.log('Unknown message type:', msg.type);
+            }
+        }
+        
+        function getPrinters() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({type: 'get_printers'}));
+            }
+        }
+        
+        function displayPrinters(printers) {
+            const container = document.getElementById('printers');
+            container.innerHTML = '<h3>Available Printers:</h3>';
+            
+            printers.forEach(printer => {
+                const printerDiv = document.createElement('div');
+                printerDiv.innerHTML = `
+                    <p><strong>${printer.name}</strong> - ${printer.status} 
+                    ${printer.default ? '(Default)' : ''}
+                    <button onclick="printTest('${printer.name}')">Print Test</button>
+                    </p>
+                `;
+                container.appendChild(printerDiv);
+            });
+        }
+        
+        function printTest(printerName) {
+            const content = "Test print from printer service\n" + 
+                           "Date: " + new Date().toLocaleString() + "\n" +
+                           "Printer: " + printerName;
+            
+            const printJob = {
+                printerName: printerName,
+                content: content,
+                jobId: 'test-' + Date.now()
+            };
+            
+            console.log('Sending print job:', printJob);
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'print',
+                    payload: printJob  // Send as object, not stringified
+                }));
+            }
+        }
+        
+        // Initialize connection
+        connect();
+    </script>
+</body>
+</html>
