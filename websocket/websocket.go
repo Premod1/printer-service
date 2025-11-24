@@ -21,30 +21,17 @@ type Message struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
-type InvoiceData struct {
-	InvoiceCode     string        `json:"invoiceCode"`
-	TableNumber     string        `json:"tableNumber"`
-	CurrentDateTime string        `json:"currentDateTime"`
-	Items           []InvoiceItem `json:"items"`
-	Subtotal        float64       `json:"subtotal"`
-	Discount        string        `json:"discount"`
-	ServiceFee      string        `json:"serviceFee"`
-	GrandTotal      float64       `json:"grandTotal"`
-	CashPaid        string        `json:"cashPaid"`
-	CustomerBalance float64       `json:"customerBalance"`
-}
-
-type InvoiceItem struct {
-	Name     string  `json:"name"`
-	Quantity int     `json:"quantity"`
-	Price    float64 `json:"price"`
-}
-
 type PrintJobEscPos struct {
 	PrinterName string      `json:"printerName"`
 	JobID       string      `json:"jobId"`
-	Data        InvoiceData `json:"data"`
+	Data        interface{} `json:"data"`   // Keep as interface{} for backward compatibility
 	Format      string      `json:"format"` // "text", "escpos", "pdf"
+}
+
+type RawEscPosJob struct {
+	PrinterName string `json:"printerName"`
+	JobID       string `json:"jobId"`
+	RawData     string `json:"rawData"` // Raw ESC/POS commands
 }
 
 type Client struct {
@@ -99,8 +86,10 @@ func (c *Client) handleMessage(msg Message) {
 		c.sendPrinters()
 	case "print":
 		c.handlePrint(msg.Payload)
-	case "print_invoice":
-		c.handleInvoicePrint(msg.Payload)
+	case "print_escpos":
+		c.handlePrintEscPos(msg.Payload)
+	case "print_raw_escpos":
+		c.handlePrintRawEscPos(msg.Payload)
 	}
 }
 
@@ -140,60 +129,30 @@ func (c *Client) handlePrint(payload json.RawMessage) {
 	c.conn.WriteJSON(response)
 }
 
-func (c *Client) handleInvoicePrint(payload json.RawMessage) {
-	var printJob PrintJobEscPos
+func (c *Client) handlePrintEscPos(payload json.RawMessage) {
+	// This endpoint is deprecated - use print_raw_escpos instead
+	c.sendError("This endpoint is deprecated. Use 'print_raw_escpos' with raw ESC/POS commands generated from frontend.")
+}
+
+func (c *Client) handlePrintRawEscPos(payload json.RawMessage) {
+	var printJob RawEscPosJob
 	if err := json.Unmarshal(payload, &printJob); err != nil {
-		c.sendError("Invalid invoice format")
+		c.sendError("Invalid raw ESC/POS print job format")
 		return
 	}
 
-	// For now, convert invoice data to simple text format
-	// TODO: Implement ESC/POS generation when escpos.go is working
-	content := c.generateInvoiceText(printJob.Data)
-
-	err := printer.PrintText(printJob.PrinterName, content)
+	err := printer.PrintEscPos(printJob.PrinterName, printJob.RawData)
 	if err != nil {
-		c.sendError(fmt.Sprintf("Print failed: %v", err))
+		c.sendError(fmt.Sprintf("Raw ESC/POS print failed: %v", err))
 		return
 	}
 
 	response := Message{
-		Type:    "print_success",
+		Type:    "raw_escpos_print_success",
 		Payload: mustMarshal(map[string]string{"jobId": printJob.JobID}),
 	}
 
 	c.conn.WriteJSON(response)
-}
-
-// Simple text invoice generator (temporary until ESC/POS is working)
-func (c *Client) generateInvoiceText(data InvoiceData) string {
-	var content string
-	content += "========================================\n"
-	content += "           RECEIPT                      \n"
-	content += "========================================\n"
-	content += fmt.Sprintf("Invoice: %s\n", data.InvoiceCode)
-	content += fmt.Sprintf("Date: %s\n", data.CurrentDateTime)
-	if data.TableNumber != "" {
-		content += fmt.Sprintf("Table: %s\n", data.TableNumber)
-	}
-	content += "----------------------------------------\n"
-	content += "ITEMS:\n"
-	content += "----------------------------------------\n"
-
-	for _, item := range data.Items {
-		total := float64(item.Quantity) * item.Price
-		content += fmt.Sprintf("%-20s %2d x %6.2f = %7.2f\n",
-			item.Name, item.Quantity, item.Price, total)
-	}
-
-	content += "----------------------------------------\n"
-	content += fmt.Sprintf("Subtotal: %30.2f\n", data.Subtotal)
-	content += fmt.Sprintf("Total: %33.2f\n", data.GrandTotal)
-	content += "========================================\n"
-	content += "         THANK YOU!                     \n"
-	content += "========================================\n"
-
-	return content
 }
 
 func (c *Client) sendError(message string) {

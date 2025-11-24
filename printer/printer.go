@@ -188,3 +188,43 @@ func printUnix(printerName string, content string) error {
 	fmt.Printf("Print command successful. Output: %s\n", string(output))
 	return nil
 }
+
+// PrintEscPos sends ESC/POS commands to specified printer
+func PrintEscPos(printerName string, escPosData string) error {
+	switch runtime.GOOS {
+	case "windows":
+		return printEscPosWindows(printerName, escPosData)
+	case "darwin", "linux":
+		return printEscPosUnix(printerName, escPosData)
+	default:
+		return fmt.Errorf("unsupported platform")
+	}
+}
+
+func printEscPosWindows(printerName string, escPosData string) error {
+	// Create temporary file with ESC/POS data
+	tempFile := "print_escpos_temp.bin"
+	err := os.WriteFile(tempFile, []byte(escPosData), 0644)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tempFile)
+
+	// Use copy command to send raw data to printer
+	cmd := exec.Command("cmd", "/c", "copy", "/b", tempFile, printerName)
+	return cmd.Run()
+}
+
+func printEscPosUnix(printerName string, escPosData string) error {
+	cmd := exec.Command("lp", "-d", printerName, "-o", "raw")
+	cmd.Stdin = strings.NewReader(escPosData)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("ESC/POS print command failed: %v\nOutput: %s\n", err, string(output))
+		return fmt.Errorf("escpos print failed: %v, output: %s", err, string(output))
+	}
+
+	fmt.Printf("ESC/POS print command successful. Output: %s\n", string(output))
+	return nil
+}
