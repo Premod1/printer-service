@@ -202,17 +202,8 @@ func PrintEscPos(printerName string, escPosData string) error {
 }
 
 func printEscPosWindows(printerName string, escPosData string) error {
-	// Create temporary file with ESC/POS data
-	tempFile := "print_escpos_temp.bin"
-	err := os.WriteFile(tempFile, []byte(escPosData), 0644)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tempFile)
-
-	// Use copy command to send raw data to printer
-	cmd := exec.Command("cmd", "/c", "copy", "/b", tempFile, printerName)
-	return cmd.Run()
+	// Use Win32 Print Spooler API for raw ESC/POS printing
+	return PrintRawESCPOSWindows(printerName, []byte(escPosData))
 }
 
 func printEscPosUnix(printerName string, escPosData string) error {
