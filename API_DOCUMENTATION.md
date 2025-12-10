@@ -131,16 +131,65 @@ curl -X POST http://localhost:8081/api/print/escpos \
   -H "Content-Type: application/json" \
   -d '{
     "printerName": "Thermal Receipt Printer",
-    "rawData": "\\x1b@\\x1b!\\x10RECEIPT TEST\\n\\x1b!\\x00\\nItem 1 ............ $10.00\\nItem 2 ............ $15.00\\n\\x1b!\\x10TOTAL: $25.00\\n\\x1b\\x64\\x05\\x1bi"
+    "rawData": "\\x1b@\\x1ba\\x01\\x1b!\\x30RECEIPT\\n\\x1b!\\x00\\x1ba\\x00Item 1\\x09\\x09$10.00\\nItem 2\\x09\\x09$15.00\\n\\x1b\\x64\\x02\\x1b\\x45\\x01TOTAL: $25.00\\x1b\\x45\\x00\\n\\x1b\\x64\\x05\\x1b\\x69"
   }'
 ```
 
-**Common ESC/POS Commands**:
-- `\x1b@` - Initialize printer
-- `\x1b!\x10` - Double height text
-- `\x1b!\x00` - Normal text
-- `\x1b\x64\x05` - Feed 5 lines
-- `\x1bi` - Full cut
+**Complete Receipt Example**:
+```bash
+curl -X POST http://localhost:8081/api/print/escpos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "printerName": "POS-58",
+    "rawData": "\\x1b@\\x1ba\\x01\\x1b!\\x30MY STORE\\n\\x1b!\\x00\\x1ba\\x01123 Business St\\nCity, State 12345\\nTel: (555) 123-4567\\n\\x1b\\x64\\x02\\x1ba\\x00================================\\n\\x1bTIME: 2025-12-10 15:30:00\\nCASHIER: John Doe\\nRECEIPT #: 001234\\n================================\\n\\x1b\\x45\\x01ITEM\\x09\\x09QTY\\x09PRICE\\x1b\\x45\\x00\\n--------------------------------\\nCoffee\\x09\\x091\\x09$3.50\\nSandwich\\x09\\x091\\x09$8.99\\nChips\\x09\\x091\\x09$2.50\\n--------------------------------\\n\\x1b\\x45\\x01SUBTOTAL:\\x09\\x09$14.99\\nTAX:\\x09\\x09\\x09$1.20\\nTOTAL:\\x09\\x09\\x09$16.19\\x1b\\x45\\x00\\n================================\\n\\x1ba\\x01PAYMENT: CASH $20.00\\nCHANGE: $3.81\\n\\x1b\\x64\\x02\\x1ba\\x01Thank you for shopping!\\nPlease come again!\\n\\x1b\\x64\\x05\\x1b\\x69"
+  }'
+```
+
+**ESC/POS Commands Reference**:
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `\x1b@` | Initialize printer | `\x1b@` |
+| `\x1b!\x00` | Normal text | `\x1b!\x00Normal Text` |
+| `\x1b!\x10` | Double height | `\x1b!\x10BIG TEXT` |
+| `\x1b!\x20` | Double width | `\x1b!\x20WIDE TEXT` |
+| `\x1b!\x30` | Double height + width | `\x1b!\x30LARGE` |
+| `\x1b!\x08` | Bold text | `\x1b!\x08Bold Text` |
+| `\x1ba\x00` | Left align | `\x1ba\x00Left` |
+| `\x1ba\x01` | Center align | `\x1ba\x01Center` |
+| `\x1ba\x02` | Right align | `\x1ba\x02Right` |
+| `\x1b\x45\x01` | Emphasize ON | `\x1b\x45\x01Bold` |
+| `\x1b\x45\x00` | Emphasize OFF | `\x1b\x45\x00Normal` |
+| `\x1b\x2d\x01` | Underline ON | `\x1b\x2d\x01Underline` |
+| `\x1b\x2d\x00` | Underline OFF | `\x1b\x2d\x00Normal` |
+| `\x1b\x64\x02` | Feed 2 lines | `\x1b\x64\x02` |
+| `\x1b\x6d` | Partial cut | `\x1b\x6d` |
+| `\x1b\x69` | Full cut | `\x1b\x69` |
+| `\x1b\x61\x00` | Left justify | `\x1b\x61\x00` |
+| `\x1b\x61\x01` | Center justify | `\x1b\x61\x01` |
+| `\x1b\x61\x02` | Right justify | `\x1b\x61\x02` |
+
+**Advanced ESC/POS Examples**:
+
+1. **Receipt Header**:
+```
+\x1b@\x1ba\x01\x1b!\x30STORE NAME\n\x1b!\x00\x1ba\x01123 Main St\nCity, State 12345\n\x1b\x64\x02
+```
+
+2. **Item Line with Price Alignment**:
+```
+\x1ba\x00Item Name\x09\x09\x09$10.99\n
+```
+
+3. **Bold Total Line**:
+```
+\x1b\x45\x01\x1ba\x02TOTAL: $25.99\x1b\x45\x00\n
+```
+
+4. **Barcode (Code128)**:
+```
+\x1d\x6b\x49\x0c123456789012\x00
+```
 
 **Status Codes**:
 - `200 OK` - Job queued successfully
@@ -258,6 +307,98 @@ Progress is represented as an integer from 0 to 100:
 
 ---
 
+---
+
+## ESC/POS Command Guide
+
+### Character Encoding
+
+ESC/POS commands must be properly escaped in JSON:
+
+| Raw Command | JSON Escaped | Description |
+|-------------|--------------|-------------|
+| `ESC @` | `\\x1b@` | Initialize printer |
+| `ESC !` | `\\x1b!` | Text attributes |
+| `ESC a` | `\\x1ba` | Alignment |
+| `ESC d` | `\\x1b\\x64` | Line feed |
+| `GS k` | `\\x1d\\x6b` | Barcode |
+| `Tab` | `\\x09` or `\\t` | Horizontal tab |
+| `Newline` | `\\n` | Line break |
+
+### Text Formatting Commands
+
+**Font Styles**:
+```javascript
+const styles = {
+    normal: "\\x1b!\\x00",
+    bold: "\\x1b!\\x08",
+    doubleHeight: "\\x1b!\\x10", 
+    doubleWidth: "\\x1b!\\x20",
+    large: "\\x1b!\\x30",
+    underline: "\\x1b\\x2d\\x01",
+    noUnderline: "\\x1b\\x2d\\x00"
+};
+```
+
+**Text Alignment**:
+```javascript
+const alignment = {
+    left: "\\x1ba\\x00",
+    center: "\\x1ba\\x01", 
+    right: "\\x1ba\\x02"
+};
+```
+
+### Paper Control
+
+**Line Feeds and Cuts**:
+```javascript
+const paperControl = {
+    feedLine: "\\n",
+    feed2Lines: "\\x1b\\x64\\x02",
+    feed5Lines: "\\x1b\\x64\\x05",
+    partialCut: "\\x1b\\x6d",
+    fullCut: "\\x1b\\x69"
+};
+```
+
+### Advanced Features
+
+**Barcodes** (Code128):
+```javascript
+function createBarcode(data) {
+    return `\\x1d\\x6b\\x49${String.fromCharCode(data.length)}${data}`;
+}
+```
+
+**QR Codes** (if supported):
+```javascript
+function createQRCode(data) {
+    const size = Math.min(data.length + 3, 255);
+    return `\\x1d(k\\x04\\x00\\x31\\x41\\x32\\x00` +  // QR Model
+           `\\x1d(k\\x03\\x00\\x31\\x43\\x03` +        // Error correction
+           `\\x1d(k${String.fromCharCode(size)}\\x00\\x31\\x50\\x30${data}` + // Data
+           `\\x1d(k\\x03\\x00\\x31\\x51\\x30`;         // Print
+}
+```
+
+**Tables and Columns**:
+```javascript
+function formatTableRow(col1, col2, col3, width = 32) {
+    const col1Width = 12;
+    const col2Width = 8;
+    const col3Width = 12;
+    
+    return col1.padEnd(col1Width).substring(0, col1Width) + 
+           col2.padStart(col2Width).substring(0, col2Width) + 
+           col3.padStart(col3Width).substring(0, col3Width) + "\\n";
+}
+
+// Usage
+let tableData = formatTableRow("Item", "Qty", "Price");
+tableData += formatTableRow("Coffee", "2", "$7.00");
+```
+
 ## Error Handling
 
 ### Common Error Responses
@@ -333,22 +474,119 @@ async function getJobStatus(jobId) {
     return data.job;
 }
 
-// Monitor job progress
-async function monitorJob(jobId) {
-    const checkStatus = async () => {
-        const job = await getJobStatus(jobId);
-        console.log(`Job ${jobId}: ${job.status} (${job.progress}%)`);
-        
-        if (job.status === 'completed') {
-            console.log('Print job completed successfully!');
-        } else if (job.status === 'failed') {
-            console.error('Print job failed:', job.error);
-        } else {
-            // Still processing, check again in 1 second
-            setTimeout(checkStatus, 1000);
-        }
-    };
-    checkStatus();
+// Print ESC/POS receipt
+async function printEscPosReceipt(printerName, receiptData) {
+    const escPosCommands = generateEscPosReceipt(receiptData);
+    const response = await fetch('/api/print/escpos', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            printerName: printerName,
+            rawData: escPosCommands
+        })
+    });
+    const data = await response.json();
+    return data.jobId;
+}
+
+// Generate ESC/POS commands for a receipt
+function generateEscPosReceipt(data) {
+    let commands = '';
+    
+    // Initialize and center store name
+    commands += '\\x1b@';  // Initialize
+    commands += '\\x1ba\\x01';  // Center align
+    commands += `\\x1b!\\x30${data.storeName}\\n`;  // Large store name
+    
+    // Store info
+    commands += '\\x1b!\\x00\\x1ba\\x01';  // Normal text, center
+    commands += `${data.address}\\n`;
+    commands += `${data.phone}\\n`;
+    commands += '\\x1b\\x64\\x02';  // Feed 2 lines
+    
+    // Receipt header
+    commands += '\\x1ba\\x00';  // Left align
+    commands += '================================\\n';
+    commands += `DATE: ${data.date}\\n`;
+    commands += `CASHIER: ${data.cashier}\\n`;
+    commands += `RECEIPT #: ${data.receiptNumber}\\n`;
+    commands += '================================\\n';
+    
+    // Items header
+    commands += '\\x1b\\x45\\x01ITEM\\x09QTY\\x09PRICE\\x1b\\x45\\x00\\n';
+    commands += '--------------------------------\\n';
+    
+    // Items
+    data.items.forEach(item => {
+        commands += `${item.name}\\x09${item.qty}\\x09$${item.price}\\n`;
+    });
+    
+    // Totals
+    commands += '--------------------------------\\n';
+    commands += `\\x1b\\x45\\x01SUBTOTAL:\\x09$${data.subtotal}\\n`;
+    commands += `TAX:\\x09\\x09$${data.tax}\\n`;
+    commands += `TOTAL:\\x09\\x09$${data.total}\\x1b\\x45\\x00\\n`;
+    commands += '================================\\n';
+    
+    // Payment info
+    commands += '\\x1ba\\x01';  // Center align
+    commands += `PAYMENT: ${data.paymentMethod} $${data.payment}\\n`;
+    if (data.change > 0) {
+        commands += `CHANGE: $${data.change}\\n`;
+    }
+    
+    // Footer
+    commands += '\\x1b\\x64\\x02';  // Feed 2 lines
+    commands += 'Thank you for shopping!\\n';
+    commands += 'Please come again!\\n';
+    commands += '\\x1b\\x64\\x05';  // Feed 5 lines
+    commands += '\\x1b\\x69';  // Cut paper
+    
+    return commands;
+}
+
+// Example usage
+const receiptData = {
+    storeName: "TECH STORE",
+    address: "123 Tech Street\\nSilicon Valley, CA 94000",
+    phone: "Tel: (555) 123-4567",
+    date: new Date().toLocaleString(),
+    cashier: "Alice Johnson",
+    receiptNumber: "R001234",
+    items: [
+        { name: "Laptop", qty: 1, price: "999.99" },
+        { name: "Mouse", qty: 2, price: "25.00" },
+        { name: "Keyboard", qty: 1, price: "75.00" }
+    ],
+    subtotal: "1099.99",
+    tax: "87.99",
+    total: "1187.98",
+    paymentMethod: "CREDIT CARD",
+    payment: "1187.98",
+    change: 0
+};
+
+// Print the receipt
+printEscPosReceipt("Thermal Printer", receiptData)
+    .then(jobId => {
+        console.log("Receipt job queued:", jobId);
+        monitorJob(jobId);
+    });
+
+// QR Code generation (if printer supports it)
+function generateQRCode(data) {
+    // QR Code ESC/POS commands
+    return `\\x1d(k\\x04\\x00\\x31\\x41\\x32\\x00` + // QR Code model
+           `\\x1d(k\\x03\\x00\\x31\\x43\\x03` + // Error correction level
+           `\\x1d(k${String.fromCharCode(data.length + 3)}\\x00\\x31\\x50\\x30${data}` + // Store QR data
+           `\\x1d(k\\x03\\x00\\x31\\x51\\x30`; // Print QR code
+}
+
+// Barcode generation (Code128)
+function generateBarcode(data) {
+    return `\\x1d\\x6b\\x49${String.fromCharCode(data.length)}${data}\\x00`;
 }
 ```
 
