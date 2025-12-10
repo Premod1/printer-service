@@ -2,6 +2,10 @@
 
 A cross-platform WebSocket service for printing from web applications to local system printers. Supports both plain text and ESC/POS thermal receipt printing with 80mm receipt optimization.
 
+## run and test
+
+http://localhost:8081/
+
 ## 🚀 Features
 
 - **Cross-platform support** (Windows, macOS, Linux)
