@@ -1,110 +1,244 @@
-# Printer Service
+# 🖨️ Printer Service
 
-A cross-platform WebSocket service for printing from web applications to local system printers. Supports both plain text and ESC/POS thermal receipt printing with 80mm receipt optimization.
+A comprehensive cross-platform service for printing from web applications to local system printers. Features both REST API and WebSocket communication with full ESC/POS thermal printing support.
 
-## run and test
+## 🚀 Quick Start
 
-http://localhost:8081/
+```bash
+# Run the service
+go run main.go
 
-## 🚀 Features
+# Test the interfaces
+# REST API: http://localhost:8081/api
+# WebSocket: ws://localhost:8081/ws  
+# Test UI: http://localhost:8081/
+```
 
-- **Cross-platform support** (Windows, macOS, Linux)
-- **WebSocket-based API** for real-time communication
-- **Multiple print formats**: Plain text and ESC/POS thermal receipts
-- **80mm thermal printer optimization** with perfect formatting
-- **Frontend invoice generation** with customizable templates
-- **Vue.js ready** with composables and examples
-- **Auto printer detection** across all platforms
-- **Real-time connection status** and error handling
+## ✨ Features
+
+### Core Functionality
+- 🌐 **Dual Communication**: REST API + WebSocket support
+- 🖥️ **Cross-platform**: Windows, macOS, Linux compatibility
+- 🧾 **Multiple Formats**: Plain text and ESC/POS thermal printing
+- 📋 **Job Management**: Queue system with status tracking
+- 🔄 **Auto Detection**: System printer discovery
+
+### Enterprise Features
+- 📊 **Progress Tracking**: Real-time job monitoring
+- 🎯 **80mm Optimization**: Perfect thermal receipt formatting
+- 🔒 **Error Handling**: Comprehensive error reporting
+- 🚀 **High Performance**: Concurrent job processing
+- 📱 **Web Interface**: Built-in test UI
 
 ## 📋 Table of Contents
 
-- [Quick Start](#quick-start)
-- [Installation](#installation)
-- [API Reference](#api-reference)
-- [Vue.js Integration](#vuejs-integration)
-- [ESC/POS Printing](#escpos-printing)
-- [Platform Support](#platform-support)
-- [Examples](#examples)
-- [Troubleshooting](#troubleshooting)
+- [🚀 Quick Start](#-quick-start)
+- [📦 Installation](#-installation)
+- [🔌 REST API](#-rest-api)
+- [🌐 WebSocket API](#-websocket-api)
+- [🧾 ESC/POS Printing](#-escpos-printing)
+- [🔧 Integration Examples](#-integration-examples)
+- [🖥️ Platform Support](#%EF%B8%8F-platform-support)
+- [🛠️ Troubleshooting](#%EF%B8%8F-troubleshooting)
+- [📚 Advanced Usage](#-advanced-usage)
 
-## ⚡ Quick Start
-
-### 1. Start the Service
-
-```bash
-# Clone and run the service
-git clone <repository-url>
-cd printer-service
-go mod download
-go run main.go
-```
-
-Service will start on `ws://localhost:8081/ws`
-
-### 2. Test the Connection
-
-Open `test.html` in your browser or use the Vue.js examples below.
-
-## 📦 Installation
+## ⚡ Installation & Setup
 
 ### Prerequisites
 
-- **Go 1.21+**
-- **System printer drivers installed**
+- **Go 1.21+** for building from source
+- **System printer drivers** installed
 - **CUPS** (Linux/macOS) or **Windows Print Spooler**
 
-### Download Dependencies
+### Option 1: Download Pre-built Executable
 
 ```bash
+# Windows
+curl -L -o printer-service.exe \
+  https://github.com/Premod1/printer-service/releases/latest/download/printer-service.exe
+./printer-service.exe
+
+# Linux
+curl -L -o printer-service \
+  https://github.com/Premod1/printer-service/releases/latest/download/printer-service-linux
+chmod +x printer-service
+./printer-service
+
+# macOS
+curl -L -o printer-service \
+  https://github.com/Premod1/printer-service/releases/latest/download/printer-service-mac
+chmod +x printer-service
+./printer-service
+```
+
+### Option 2: Build from Source
+
+```bash
+git clone https://github.com/Premod1/printer-service.git
+cd printer-service
 go mod download
-```
-
-### Run the Service
-
-```bash
 go run main.go
+
+# Or build executable
+go build -o printer-service
 ```
 
-### Build for Production
+### Verify Installation
 
 ```bash
-# Current platform
-go build -o printer-service
+# Health check
+curl http://localhost:8081/health
+# Response: "Printer service is running"
 
-# Cross-platform builds
-GOOS=windows GOARCH=amd64 go build -o printer-service.exe
-GOOS=linux GOARCH=amd64 go build -o printer-service-linux
-GOOS=darwin GOARCH=amd64 go build -o printer-service-mac
+# Check available endpoints
+curl http://localhost:8081/api/printers     # REST API
+# WebSocket: ws://localhost:8081/ws         # WebSocket
+# Test UI: http://localhost:8081/           # Web Interface
 ```
 
-## 🔌 API Reference
+## 🔌 REST API
 
-### WebSocket Endpoint
-```
-ws://localhost:8081/ws
+The REST API provides HTTP endpoints for printer management and print job submission with comprehensive job tracking.
+
+**Base URL**: `http://localhost:8081/api`
+
+### API Endpoints Overview
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/printers` | Get available printers |
+| `POST` | `/api/print/text` | Queue text print job |
+| `POST` | `/api/print/escpos` | Queue ESC/POS print job |
+| `GET` | `/api/jobs` | List all print jobs |
+| `GET` | `/api/jobs/{jobId}` | Get specific job status |
+
+### 1. Get Available Printers
+
+```bash
+curl -X GET http://localhost:8081/api/printers
 ```
 
-### Message Format
+**Response**:
 ```json
 {
-  "type": "message_type",
-  "payload": { /* message data */ }
+  "success": true,
+  "printers": [
+    {
+      "name": "HP LaserJet Pro",
+      "status": "Ready",
+      "default": true
+    },
+    {
+      "name": "Thermal Receipt Printer",
+      "status": "Ready", 
+      "default": false
+    }
+  ]
 }
 ```
 
-### Available Message Types
+### 2. Print Text Content
 
-#### 1. Get Printers
-**Request:**
+```bash
+curl -X POST http://localhost:8081/api/print/text \
+  -H "Content-Type: application/json" \
+  -d '{
+    "printerName": "HP LaserJet Pro",
+    "content": "Hello World!\nThis is a test print.\nTimestamp: 2025-12-11 10:30:00"
+  }'
+```
+
+**Response**:
 ```json
 {
-  "type": "get_printers"
+  "success": true,
+  "jobId": "job_1765360872587975241",
+  "message": "Print job queued successfully"
 }
 ```
 
-**Response:**
+### 3. Print ESC/POS Content
+
+```bash
+curl -X POST http://localhost:8081/api/print/escpos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "printerName": "Thermal Receipt Printer",
+    "rawData": "\\x1b@\\x1ba\\x01\\x1b!\\x30RECEIPT\\n\\x1b!\\x00\\x1ba\\x00Item 1\\x09\\x09$10.00\\nItem 2\\x09\\x09$15.00\\n\\x1b\\x64\\x02\\x1b\\x45\\x01TOTAL: $25.00\\x1b\\x45\\x00\\n\\x1b\\x64\\x05\\x1b\\x69"
+  }'
+```
+
+### 4. Monitor Job Status
+
+```bash
+# Get all jobs
+curl -X GET http://localhost:8081/api/jobs
+
+# Get specific job
+curl -X GET http://localhost:8081/api/jobs/job_1765360872587975241
+
+# Filter jobs by status
+curl -X GET "http://localhost:8081/api/jobs?status=completed&limit=5"
+```
+
+**Job Response**:
 ```json
+{
+  "success": true,
+  "job": {
+    "jobId": "job_1765360872587975241",
+    "printerName": "HP LaserJet Pro",
+    "content": "Hello World Test Print",
+    "status": "completed",
+    "createdAt": "2025-12-11T10:31:12.587977806+05:30",
+    "completedAt": "2025-12-11T10:31:12.665607362+05:30",
+    "error": "",
+    "jobType": "text",
+    "progress": 100
+  }
+}
+```
+
+### Job Status States
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Job queued, waiting to be processed |
+| `printing` | Job currently being sent to printer |
+| `completed` | Job finished successfully |
+| `failed` | Job failed with error |
+
+## 🌐 WebSocket API
+
+For real-time applications, use WebSocket communication at `ws://localhost:8081/ws`.
+
+### Connection Example
+
+```javascript
+const ws = new WebSocket('ws://localhost:8081/ws');
+
+ws.onopen = () => {
+  console.log('Connected to printer service');
+  // Get printers immediately
+  ws.send(JSON.stringify({ type: 'get_printers' }));
+};
+
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  handleMessage(message);
+};
+```
+
+### Message Types
+
+#### Get Printers
+```javascript
+// Send
+ws.send(JSON.stringify({
+  type: "get_printers"
+}));
+
+// Receive
 {
   "type": "printers_list",
   "payload": [
@@ -117,21 +251,19 @@ ws://localhost:8081/ws
 }
 ```
 
-#### 2. Print Text
-**Request:**
-```json
-{
-  "type": "print",
-  "payload": {
-    "printerName": "HP LaserJet Pro",
-    "content": "Hello World!\nThis is a test print.",
-    "jobId": "job_123456"
+#### Print Text
+```javascript
+// Send  
+ws.send(JSON.stringify({
+  type: "print",
+  payload: {
+    printerName: "HP LaserJet Pro",
+    content: "Hello World!\nThis is a test print.",
+    jobId: "job_123456"
   }
-}
-```
+}));
 
-**Response:**
-```json
+// Receive
 {
   "type": "print_success",
   "payload": {
@@ -140,21 +272,19 @@ ws://localhost:8081/ws
 }
 ```
 
-#### 3. Print ESC/POS (Raw Commands)
-**Request:**
-```json
-{
-  "type": "print_raw_escpos",
-  "payload": {
-    "printerName": "Receipt Printer",
-    "jobId": "escpos_001",
-    "rawData": "\x1b@\x1ba\x01RECEIPT\n\x1dV\x41\x00"
+#### Print ESC/POS
+```javascript
+// Send
+ws.send(JSON.stringify({
+  type: "print_raw_escpos",
+  payload: {
+    printerName: "Receipt Printer",
+    jobId: "escpos_001", 
+    rawData: "\x1b@\x1ba\x01RECEIPT\n\x1dV\x41\x00"
   }
-}
-```
+}));
 
-**Response:**
-```json
+// Receive
 {
   "type": "raw_escpos_print_success",
   "payload": {
@@ -163,8 +293,8 @@ ws://localhost:8081/ws
 }
 ```
 
-#### 4. Error Response
-```json
+#### Error Handling
+```javascript
 {
   "type": "error",
   "payload": {
@@ -173,792 +303,915 @@ ws://localhost:8081/ws
 }
 ```
 
-## 🔧 Vue.js Integration
-
-### 1. Vue Composable (Recommended)
-
-Create `composables/usePrinterService.js`:
-
-```javascript
-import { ref, onUnmounted } from 'vue'
-
-export function usePrinterService() {
-  const ws = ref(null)
-  const isConnected = ref(false)
-  const printers = ref([])
-  const lastError = ref('')
-
-  const connect = () => {
-    if (ws.value) {
-      ws.value.close()
-    }
-
-    ws.value = new WebSocket('ws://localhost:8081/ws')
-
-    ws.value.onopen = () => {
-      isConnected.value = true
-      console.log('Connected to printer service')
-    }
-
-    ws.value.onmessage = (event) => {
-      const message = JSON.parse(event.data)
-      handleMessage(message)
-    }
-
-    ws.value.onclose = () => {
-      isConnected.value = false
-      console.log('Disconnected from printer service')
-      
-      // Auto-reconnect after 3 seconds
-      setTimeout(() => {
-        if (!isConnected.value) {
-          connect()
-        }
-      }, 3000)
-    }
-
-    ws.value.onerror = (error) => {
-      console.error('WebSocket error:', error)
-      lastError.value = 'Connection failed'
-    }
-  }
-
-  const handleMessage = (message) => {
-    switch (message.type) {
-      case 'printers_list':
-        printers.value = message.payload
-        break
-      case 'print_success':
-        console.log('Print job completed:', message.payload.jobId)
-        break
-      case 'raw_escpos_print_success':
-        console.log('ESC/POS print completed:', message.payload.jobId)
-        break
-      case 'error':
-        lastError.value = message.payload.message
-        console.error('Printer error:', message.payload.message)
-        break
-    }
-  }
-
-  const sendMessage = (message) => {
-    if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-      ws.value.send(JSON.stringify(message))
-    } else {
-      lastError.value = 'Not connected to printer service'
-    }
-  }
-
-  const getPrinters = () => {
-    sendMessage({ type: 'get_printers' })
-  }
-
-  const printText = (printerName, content) => {
-    const jobId = 'text_' + Date.now()
-    sendMessage({
-      type: 'print',
-      payload: {
-        printerName,
-        content,
-        jobId
-      }
-    })
-    return jobId
-  }
-
-  const printReceipt = (printerName, receiptData) => {
-    const escPosCommands = generateReceiptESCPOS(receiptData)
-    const jobId = 'receipt_' + Date.now()
-    
-    sendMessage({
-      type: 'print_raw_escpos',
-      payload: {
-        printerName,
-        jobId,
-        rawData: escPosCommands
-      }
-    })
-    return jobId
-  }
-
-  // ESC/POS receipt generation for 80mm thermal printers
-  const generateReceiptESCPOS = (data) => {
-    const ESC_POS = {
-      INIT: '\x1b@',
-      BOLD_ON: '\x1bE\x01',
-      BOLD_OFF: '\x1bE\x00',
-      ALIGN_LEFT: '\x1ba\x00',
-      ALIGN_CENTER: '\x1ba\x01',
-      SIZE_NORMAL: '\x1d!\x00',
-      SIZE_DOUBLE_HEIGHT: '\x1d!\x01',
-      SIZE_DOUBLE_WIDTH: '\x1d!\x10',
-      FONT_A: '\x1bM\x00',
-      LINE_FEED: '\n',
-      CUT_PAPER: '\x1dV\x41\x00',
-      PAPER_WIDTH: 48
-    }
-
-    let escpos = ''
-    const width = ESC_POS.PAPER_WIDTH
-    const separator = '-'.repeat(width)
-
-    // Initialize
-    escpos += ESC_POS.INIT
-    escpos += ESC_POS.FONT_A
-
-    // Header
-    escpos += ESC_POS.ALIGN_CENTER
-    escpos += ESC_POS.BOLD_ON
-    escpos += ESC_POS.SIZE_DOUBLE_HEIGHT
-    escpos += (data.businessName || 'RESTAURANT RECEIPT')
-    escpos += ESC_POS.LINE_FEED
-    escpos += ESC_POS.SIZE_NORMAL
-    escpos += ESC_POS.BOLD_OFF
-    escpos += ESC_POS.LINE_FEED
-
-    // Business details
-    if (data.address) {
-      escpos += data.address + ESC_POS.LINE_FEED
-    }
-    if (data.phone) {
-      escpos += 'Phone: ' + data.phone + ESC_POS.LINE_FEED
-    }
-    escpos += ESC_POS.LINE_FEED
-
-    // Invoice details
-    escpos += ESC_POS.ALIGN_LEFT
-    escpos += separator + ESC_POS.LINE_FEED
-    escpos += `Invoice: ${data.invoiceCode || 'N/A'}` + ESC_POS.LINE_FEED
-    escpos += `Table: ${data.tableNumber || 'N/A'}` + ESC_POS.LINE_FEED
-    escpos += `Date: ${data.date || new Date().toLocaleString()}` + ESC_POS.LINE_FEED
-    escpos += separator + ESC_POS.LINE_FEED
-
-    // Items header
-    escpos += ESC_POS.BOLD_ON
-    escpos += 'ITEM                        QTY  PRICE'
-    escpos += ESC_POS.LINE_FEED
-    escpos += ESC_POS.BOLD_OFF
-    escpos += separator + ESC_POS.LINE_FEED
-
-    // Items
-    data.items?.forEach((item, index) => {
-      let itemName = item.name
-      if (itemName.length > 26) {
-        itemName = itemName.substring(0, 23) + '...'
-      }
-      
-      const line = `${(index + 1).toString().padStart(2, '0')}. ${itemName.padEnd(24, ' ')} ${item.quantity.toString().padStart(2, ' ')} ${item.price.toFixed(2).padStart(6, ' ')}`
-      escpos += line + ESC_POS.LINE_FEED
-    })
-
-    // Totals
-    escpos += separator + ESC_POS.LINE_FEED
-    if (data.subtotal) {
-      escpos += `Subtotal:${('$' + data.subtotal.toFixed(2)).padStart(width - 9, ' ')}` + ESC_POS.LINE_FEED
-    }
-    if (data.discount) {
-      escpos += `Discount:${('$' + data.discount).padStart(width - 9, ' ')}` + ESC_POS.LINE_FEED
-    }
-    if (data.tax) {
-      escpos += `Tax:${('$' + data.tax.toFixed(2)).padStart(width - 4, ' ')}` + ESC_POS.LINE_FEED
-    }
-    escpos += separator + ESC_POS.LINE_FEED
-
-    // Grand total
-    escpos += ESC_POS.BOLD_ON
-    const totalText = `TOTAL: $${data.total?.toFixed(2) || '0.00'}`
-    escpos += ESC_POS.ALIGN_CENTER
-    escpos += ESC_POS.SIZE_DOUBLE_WIDTH
-    escpos += totalText + ESC_POS.LINE_FEED
-    escpos += ESC_POS.SIZE_NORMAL
-    escpos += ESC_POS.BOLD_OFF
-    escpos += ESC_POS.ALIGN_LEFT
-
-    // Payment info
-    escpos += separator + ESC_POS.LINE_FEED
-    if (data.cashPaid) {
-      escpos += `Cash Paid:${('$' + data.cashPaid).padStart(width - 10, ' ')}` + ESC_POS.LINE_FEED
-    }
-    if (data.change !== undefined) {
-      escpos += `Change:${('$' + data.change.toFixed(2)).padStart(width - 7, ' ')}` + ESC_POS.LINE_FEED
-    }
-    escpos += ESC_POS.LINE_FEED
-
-    // Footer
-    escpos += ESC_POS.ALIGN_CENTER
-    escpos += separator + ESC_POS.LINE_FEED
-    escpos += ESC_POS.BOLD_ON
-    escpos += '★ THANK YOU FOR VISITING! ★' + ESC_POS.LINE_FEED
-    escpos += ESC_POS.BOLD_OFF
-    escpos += 'Please visit us again soon!' + ESC_POS.LINE_FEED
-    escpos += separator + ESC_POS.LINE_FEED
-    escpos += ESC_POS.LINE_FEED
-    escpos += 'Customer Copy' + ESC_POS.LINE_FEED
-    escpos += ESC_POS.LINE_FEED
-
-    // Cut paper
-    escpos += ESC_POS.CUT_PAPER
-
-    return escpos
-  }
-
-  // Auto-connect on initialization
-  connect()
-
-  // Cleanup on unmount
-  onUnmounted(() => {
-    if (ws.value) {
-      ws.value.close()
-    }
-  })
-
-  return {
-    // State
-    isConnected,
-    printers,
-    lastError,
-    
-    // Methods
-    connect,
-    getPrinters,
-    printText,
-    printReceipt,
-    generateReceiptESCPOS
-  }
-}
-```
-
-### 2. Vue Component Example
-
-Create `components/PrinterManager.vue`:
-
-```vue
-<template>
-  <div class="printer-manager">
-    <div class="connection-status">
-      <span :class="isConnected ? 'connected' : 'disconnected'">
-        {{ isConnected ? '🟢 Connected' : '🔴 Disconnected' }}
-      </span>
-      <button @click="getPrinters" :disabled="!isConnected">
-        Refresh Printers
-      </button>
-    </div>
-
-    <div v-if="lastError" class="error">
-      ⚠️ {{ lastError }}
-    </div>
-
-    <div class="printers-list">
-      <h3>Available Printers:</h3>
-      <div v-if="printers.length === 0" class="no-printers">
-        No printers found. Click "Refresh Printers" to search.
-      </div>
-      
-      <div 
-        v-for="printer in printers" 
-        :key="printer.name"
-        class="printer-item"
-      >
-        <div class="printer-info">
-          <strong>{{ printer.name }}</strong>
-          <span class="status">{{ printer.status }}</span>
-          <span v-if="printer.default" class="default-badge">Default</span>
-        </div>
-        
-        <div class="printer-actions">
-          <button @click="testPrint(printer.name)">
-            Test Print
-          </button>
-          <button @click="printSampleReceipt(printer.name)">
-            Print Sample Receipt
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Receipt Form -->
-    <div class="receipt-form">
-      <h3>Print Custom Receipt</h3>
-      <form @submit.prevent="printCustomReceipt">
-        <select v-model="selectedPrinter" required>
-          <option value="">Select Printer</option>
-          <option v-for="printer in printers" :key="printer.name" :value="printer.name">
-            {{ printer.name }}
-          </option>
-        </select>
-
-        <div class="form-group">
-          <label>Business Name:</label>
-          <input v-model="receiptData.businessName" />
-        </div>
-
-        <div class="form-group">
-          <label>Invoice Code:</label>
-          <input v-model="receiptData.invoiceCode" />
-        </div>
-
-        <div class="form-group">
-          <label>Table Number:</label>
-          <input v-model="receiptData.tableNumber" />
-        </div>
-
-        <div class="items-section">
-          <h4>Items:</h4>
-          <div v-for="(item, index) in receiptData.items" :key="index" class="item-row">
-            <input v-model="item.name" placeholder="Item name" />
-            <input v-model.number="item.quantity" type="number" min="1" />
-            <input v-model.number="item.price" type="number" step="0.01" min="0" />
-            <button type="button" @click="removeItem(index)">Remove</button>
-          </div>
-          <button type="button" @click="addItem">Add Item</button>
-        </div>
-
-        <div class="totals-section">
-          <div class="form-group">
-            <label>Subtotal: ${{ receiptData.subtotal.toFixed(2) }}</label>
-          </div>
-          <div class="form-group">
-            <label>Tax:</label>
-            <input v-model.number="receiptData.tax" type="number" step="0.01" min="0" />
-          </div>
-          <div class="form-group">
-            <strong>Total: ${{ receiptData.total.toFixed(2) }}</strong>
-          </div>
-        </div>
-
-        <button type="submit" :disabled="!selectedPrinter">
-          Print Receipt
-        </button>
-      </form>
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { ref, computed } from 'vue'
-import { usePrinterService } from '@/composables/usePrinterService'
-
-const {
-  isConnected,
-  printers,
-  lastError,
-  getPrinters,
-  printText,
-  printReceipt
-} = usePrinterService()
-
-const selectedPrinter = ref('')
-
-const receiptData = ref({
-  businessName: 'My Restaurant',
-  invoiceCode: 'INV-001',
-  tableNumber: '5',
-  items: [
-    { name: 'Coffee', quantity: 2, price: 3.50 },
-    { name: 'Sandwich', quantity: 1, price: 8.00 }
-  ],
-  tax: 1.15,
-  cashPaid: '20.00',
-  change: 0
-})
-
-const subtotal = computed(() => {
-  return receiptData.value.items.reduce((sum, item) => {
-    return sum + (item.quantity * item.price)
-  }, 0)
-})
-
-const total = computed(() => {
-  return subtotal.value + receiptData.value.tax
-})
-
-// Update reactive values
-receiptData.value.subtotal = subtotal
-receiptData.value.total = total
-
-const testPrint = (printerName) => {
-  const testContent = `
-TEST PRINT
-==========
-Printer: ${printerName}
-Time: ${new Date().toLocaleString()}
-This is a test print from Vue.js application.
-  `.trim()
-  
-  printText(printerName, testContent)
-}
-
-const printSampleReceipt = (printerName) => {
-  const sampleData = {
-    businessName: 'Sample Restaurant',
-    invoiceCode: 'SAMPLE-001',
-    tableNumber: '10',
-    date: new Date().toLocaleString(),
-    items: [
-      { name: 'Margherita Pizza', quantity: 1, price: 12.99 },
-      { name: 'Caesar Salad', quantity: 1, price: 8.50 },
-      { name: 'Coca Cola', quantity: 2, price: 2.50 }
-    ],
-    subtotal: 26.49,
-    tax: 2.12,
-    total: 28.61,
-    cashPaid: '30.00',
-    change: 1.39
-  }
-  
-  printReceipt(printerName, sampleData)
-}
-
-const printCustomReceipt = () => {
-  const data = {
-    ...receiptData.value,
-    date: new Date().toLocaleString(),
-    subtotal: subtotal.value,
-    total: total.value,
-    change: parseFloat(receiptData.value.cashPaid) - total.value
-  }
-  
-  printReceipt(selectedPrinter.value, data)
-}
-
-const addItem = () => {
-  receiptData.value.items.push({ name: '', quantity: 1, price: 0 })
-}
-
-const removeItem = (index) => {
-  receiptData.value.items.splice(index, 1)
-}
-
-// Load printers on mount
-getPrinters()
-</script>
-
-<style scoped>
-.printer-manager {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.connection-status {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.connected { color: green; }
-.disconnected { color: red; }
-
-.error {
-  background: #fee;
-  color: #c00;
-  padding: 10px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
-
-.printer-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  margin-bottom: 10px;
-}
-
-.printer-info {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.default-badge {
-  background: #007bff;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-}
-
-.printer-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.receipt-form {
-  margin-top: 30px;
-  padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-}
-
-.form-group input, select {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.item-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-  align-items: center;
-}
-
-.item-row input {
-  flex: 1;
-}
-
-button {
-  padding: 8px 16px;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #0056b3;
-}
-
-button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.no-printers {
-  text-align: center;
-  color: #666;
-  padding: 20px;
-}
-</style>
-```
-
-### 3. Usage in Vue App
-
-```javascript
-// main.js or in your component
-import { createApp } from 'vue'
-import App from './App.vue'
-
-const app = createApp(App)
-app.mount('#app')
-
-// In any component
-import PrinterManager from '@/components/PrinterManager.vue'
-```
-
 ## 🧾 ESC/POS Printing
 
-### 80mm Thermal Printer Optimization
+Professional thermal receipt printing with 80mm paper optimization.
 
-The service includes optimized ESC/POS commands for 80mm thermal printers:
+### Quick ESC/POS Example
 
-- **48 characters per line** for perfect formatting
-- **Font A optimization** (12x24 dots)
-- **Professional receipt layout**
-- **Bold headers and totals**
-- **Right-aligned pricing**
-- **Automatic paper cutting**
+```bash
+# Complete thermal receipt
+curl -X POST http://localhost:8081/api/print/escpos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "printerName": "POS-80",
+    "rawData": "\\x1b@\\x1ba\\x01\\x1b!\\x30TECH STORE\\n\\x1b!\\x00\\x1ba\\x01123 Main Street\\nSilicon Valley, CA\\n\\x1b\\x64\\x02\\x1ba\\x00================================\\nDATE: 2025-12-11 10:30:00\\nCASHIER: Alice Johnson\\nRECEIPT #: R001234\\n================================\\n\\x1b\\x45\\x01ITEM\\x09\\x09QTY\\x09PRICE\\x1b\\x45\\x00\\n--------------------------------\\nLaptop\\x09\\x091\\x09$999.99\\nMouse\\x09\\x092\\x09$50.00\\nKeyboard\\x09\\x091\\x09$75.00\\n--------------------------------\\n\\x1b\\x45\\x01SUBTOTAL:\\x09\\x09$1124.99\\nTAX:\\x09\\x09\\x09$89.99\\nTOTAL:\\x09\\x09\\x09$1214.98\\x1b\\x45\\x00\\n================================\\n\\x1ba\\x01PAYMENT: CREDIT CARD\\nAMOUNT: $1214.98\\n\\x1b\\x64\\x02\\x1ba\\x01Thank you for shopping!\\nPlease visit us again!\\n\\x1b\\x64\\x05\\x1b\\x69"
+  }'
+```
 
-### ESC/POS Commands Reference
+### ESC/POS Command Reference
+
+| Command | Code | Description | Example |
+|---------|------|-------------|---------|
+| **Initialize** | `\\x1b@` | Reset printer | `\\x1b@` |
+| **Text Size** | `\\x1b!` | Set text attributes | `\\x1b!\\x30` (large) |
+| **Bold On/Off** | `\\x1b\\x45` | Bold formatting | `\\x1b\\x45\\x01` (on) |
+| **Align** | `\\x1ba` | Text alignment | `\\x1ba\\x01` (center) |
+| **Feed Lines** | `\\x1b\\x64` | Line spacing | `\\x1b\\x64\\x02` (2 lines) |
+| **Cut Paper** | `\\x1b\\x69` | Full cut | `\\x1b\\x69` |
+
+### Text Attributes
 
 ```javascript
 const ESC_POS = {
-  INIT: '\x1b@',                    // Initialize printer
-  BOLD_ON: '\x1bE\x01',            // Bold text on
-  BOLD_OFF: '\x1bE\x00',           // Bold text off
-  ALIGN_CENTER: '\x1ba\x01',       // Center alignment
-  ALIGN_LEFT: '\x1ba\x00',         // Left alignment
-  SIZE_DOUBLE_HEIGHT: '\x1d!\x01', // Double height text
-  SIZE_DOUBLE_WIDTH: '\x1d!\x10',  // Double width text
-  FONT_A: '\x1bM\x00',             // Font A (optimal for 80mm)
-  CUT_PAPER: '\x1dV\x41\x00',      // Cut paper
-  LINE_FEED: '\n'                  // New line
+  // Initialize
+  INIT: '\\x1b@',
+  
+  // Text Size
+  NORMAL: '\\x1b!\\x00',
+  DOUBLE_HEIGHT: '\\x1b!\\x10', 
+  DOUBLE_WIDTH: '\\x1b!\\x20',
+  LARGE: '\\x1b!\\x30',
+  
+  // Text Style
+  BOLD_ON: '\\x1b\\x45\\x01',
+  BOLD_OFF: '\\x1b\\x45\\x00',
+  UNDERLINE_ON: '\\x1b\\x2d\\x01',
+  UNDERLINE_OFF: '\\x1b\\x2d\\x00',
+  
+  // Alignment
+  ALIGN_LEFT: '\\x1ba\\x00',
+  ALIGN_CENTER: '\\x1ba\\x01',
+  ALIGN_RIGHT: '\\x1ba\\x02',
+  
+  // Paper Control
+  FEED_2_LINES: '\\x1b\\x64\\x02',
+  FEED_5_LINES: '\\x1b\\x64\\x05',
+  PARTIAL_CUT: '\\x1b\\x6d',
+  FULL_CUT: '\\x1b\\x69'
+};
+```
+
+### Receipt Generation Helper
+
+```javascript
+function generateReceipt(data) {
+  let commands = '';
+  
+  // Header
+  commands += '\\x1b@';  // Initialize
+  commands += '\\x1ba\\x01';  // Center
+  commands += `\\x1b!\\x30${data.storeName}\\n`;  // Large store name
+  commands += '\\x1b!\\x00' + data.address + '\\n';
+  commands += '\\x1b\\x64\\x02';  // Feed 2 lines
+  
+  // Items
+  commands += '\\x1ba\\x00';  // Left align
+  commands += '================================\\n';
+  data.items.forEach(item => {
+    commands += `${item.name}\\x09${item.qty}\\x09$${item.price}\\n`;
+  });
+  
+  // Total
+  commands += '--------------------------------\\n';
+  commands += `\\x1b\\x45\\x01TOTAL: $${data.total}\\x1b\\x45\\x00\\n`;
+  
+  // Footer
+  commands += '\\x1ba\\x01Thank you!\\n';
+  commands += '\\x1b\\x64\\x05\\x1b\\x69';  // Feed and cut
+  
+  return commands;
+}
+```
+
+### 80mm Paper Optimization
+
+- **Line Width**: 48 characters maximum
+- **Font**: Font A (12x24 dots) recommended  
+- **Margins**: 2-4 characters on each side
+- **Separator**: Use `=` or `-` for visual separation
+- **Price Alignment**: Right-align using `\\x09` (tab) characters
+
+## 🔧 Integration Examples
+
+### JavaScript/Web Application
+
+```javascript
+class PrinterService {
+  constructor(baseUrl = 'http://localhost:8081/api') {
+    this.baseUrl = baseUrl;
+  }
+
+  async getPrinters() {
+    const response = await fetch(`${this.baseUrl}/printers`);
+    const data = await response.json();
+    return data.printers;
+  }
+
+  async printText(printerName, content) {
+    const response = await fetch(`${this.baseUrl}/print/text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ printerName, content })
+    });
+    const data = await response.json();
+    return data.jobId;
+  }
+
+  async printReceipt(printerName, receiptData) {
+    const escPosCommands = this.generateEscPosReceipt(receiptData);
+    const response = await fetch(`${this.baseUrl}/print/escpos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ printerName, rawData: escPosCommands })
+    });
+    const data = await response.json();
+    return data.jobId;
+  }
+
+  async getJobStatus(jobId) {
+    const response = await fetch(`${this.baseUrl}/jobs/${jobId}`);
+    const data = await response.json();
+    return data.job;
+  }
+
+  generateEscPosReceipt(data) {
+    let commands = '';
+    
+    // Initialize and header
+    commands += '\\x1b@\\x1ba\\x01';
+    commands += `\\x1b!\\x30${data.businessName}\\n`;
+    commands += `\\x1b!\\x00${data.address}\\n`;
+    commands += '\\x1b\\x64\\x02';
+    
+    // Invoice details
+    commands += '\\x1ba\\x00================================\\n';
+    commands += `Invoice: ${data.invoiceCode}\\n`;
+    commands += `Date: ${data.date}\\n`;
+    commands += '================================\\n';
+    
+    // Items
+    commands += '\\x1b\\x45\\x01ITEM\\x09\\x09QTY\\x09PRICE\\x1b\\x45\\x00\\n';
+    commands += '--------------------------------\\n';
+    data.items.forEach(item => {
+      commands += `${item.name}\\x09${item.quantity}\\x09$${item.price}\\n`;
+    });
+    
+    // Totals
+    commands += '--------------------------------\\n';
+    commands += `\\x1b\\x45\\x01TOTAL: $${data.total}\\x1b\\x45\\x00\\n`;
+    commands += '================================\\n';
+    
+    // Footer
+    commands += '\\x1ba\\x01Thank you for your business!\\n';
+    commands += '\\x1b\\x64\\x05\\x1b\\x69';
+    
+    return commands;
+  }
+}
+
+// Usage example
+const printer = new PrinterService();
+
+async function printSampleReceipt() {
+  const printers = await printer.getPrinters();
+  console.log('Available printers:', printers);
+  
+  const receiptData = {
+    businessName: 'TECH STORE',
+    address: '123 Main Street\\nSilicon Valley, CA',
+    invoiceCode: 'INV-001',
+    date: new Date().toLocaleString(),
+    items: [
+      { name: 'Laptop', quantity: 1, price: '999.99' },
+      { name: 'Mouse', quantity: 2, price: '25.00' }
+    ],
+    total: '1049.99'
+  };
+  
+  if (printers.length > 0) {
+    const jobId = await printer.printReceipt(printers[0].name, receiptData);
+    console.log('Print job queued:', jobId);
+    
+    // Monitor job status
+    setTimeout(async () => {
+      const status = await printer.getJobStatus(jobId);
+      console.log('Job status:', status.status);
+    }, 2000);
+  }
+}
+```
+
+### Laravel Integration
+
+```php
+<?php
+// Laravel Controller example
+namespace App\\Http\\Controllers;
+
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\Http;
+
+class PrinterController extends Controller
+{
+    private $printerServiceUrl = 'http://localhost:8081/api';
+    
+    public function getPrinters()
+    {
+        $response = Http::get("{$this->printerServiceUrl}/printers");
+        return response()->json($response->json());
+    }
+    
+    public function printReceipt(Request $request)
+    {
+        $validated = $request->validate([
+            'printerName' => 'required|string',
+            'businessName' => 'required|string',
+            'items' => 'required|array',
+            'items.*.name' => 'required|string',
+            'items.*.quantity' => 'required|numeric|min:1',
+            'items.*.price' => 'required|numeric|min:0',
+        ]);
+        
+        // Generate ESC/POS commands
+        $escPosData = $this->generateEscPosReceipt($validated);
+        
+        // Send to printer service
+        $response = Http::post("{$this->printerServiceUrl}/print/escpos", [
+            'printerName' => $validated['printerName'],
+            'rawData' => $escPosData
+        ]);
+        
+        return response()->json($response->json());
+    }
+    
+    private function generateEscPosReceipt($data)
+    {
+        $commands = '';
+        
+        // Header
+        $commands .= "\\x1b@\\x1ba\\x01";  // Init + center
+        $commands .= "\\x1b!\\x30{$data['businessName']}\\n";  // Large business name
+        $commands .= "\\x1b!\\x00{$data['address']}\\n";  // Address
+        $commands .= "\\x1b\\x64\\x02";  // Feed 2 lines
+        
+        // Items
+        $commands .= "\\x1ba\\x00================================\\n";
+        $commands .= "\\x1b\\x45\\x01ITEM\\x09\\x09QTY\\x09PRICE\\x1b\\x45\\x00\\n";
+        $commands .= "--------------------------------\\n";
+        
+        foreach ($data['items'] as $item) {
+            $commands .= "{$item['name']}\\x09{$item['quantity']}\\x09\${$item['price']}\\n";
+        }
+        
+        // Total
+        $total = array_sum(array_map(fn($item) => $item['quantity'] * $item['price'], $data['items']));
+        $commands .= "--------------------------------\\n";
+        $commands .= "\\x1b\\x45\\x01TOTAL: \${$total}\\x1b\\x45\\x00\\n";
+        
+        // Footer
+        $commands .= "\\x1ba\\x01Thank you!\\n";
+        $commands .= "\\x1b\\x64\\x05\\x1b\\x69";  // Feed and cut
+        
+        return $commands;
+    }
+}
+```
+
+### Python Integration
+
+```python
+import requests
+import json
+import time
+
+class PrinterService:
+    def __init__(self, base_url="http://localhost:8081/api"):
+        self.base_url = base_url
+    
+    def get_printers(self):
+        response = requests.get(f"{self.base_url}/printers")
+        return response.json()["printers"]
+    
+    def print_text(self, printer_name, content):
+        data = {"printerName": printer_name, "content": content}
+        response = requests.post(f"{self.base_url}/print/text", json=data)
+        return response.json()["jobId"]
+    
+    def print_escpos(self, printer_name, raw_data):
+        data = {"printerName": printer_name, "rawData": raw_data}
+        response = requests.post(f"{self.base_url}/print/escpos", json=data)
+        return response.json()["jobId"]
+    
+    def get_job_status(self, job_id):
+        response = requests.get(f"{self.base_url}/jobs/{job_id}")
+        return response.json()["job"]
+    
+    def wait_for_job(self, job_id, timeout=30):
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            job = self.get_job_status(job_id)
+            if job["status"] in ["completed", "failed"]:
+                return job
+            time.sleep(1)
+        return None
+
+# Usage example
+printer = PrinterService()
+
+# List available printers
+printers = printer.get_printers()
+print("Available printers:", [p["name"] for p in printers])
+
+# Print test message
+if printers:
+    job_id = printer.print_text(printers[0]["name"], "Test print from Python")
+    print(f"Job queued: {job_id}")
+    
+    # Wait for completion
+    final_job = printer.wait_for_job(job_id)
+    if final_job:
+        print(f"Job {final_job['status']}: {final_job.get('error', 'Success')}")
+```
+
+### Vue.js Composable
+
+```javascript
+// composables/usePrinterService.js
+import { ref } from 'vue'
+
+export function usePrinterService() {
+  const printers = ref([])
+  const loading = ref(false)
+  const error = ref('')
+
+  const baseUrl = 'http://localhost:8081/api'
+
+  const getPrinters = async () => {
+    loading.value = true
+    try {
+      const response = await fetch(`${baseUrl}/printers`)
+      const data = await response.json()
+      printers.value = data.printers
+    } catch (err) {
+      error.value = err.message
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const printText = async (printerName, content) => {
+    const response = await fetch(`${baseUrl}/print/text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ printerName, content })
+    })
+    const data = await response.json()
+    return data.jobId
+  }
+
+  return {
+    printers,
+    loading,
+    error,
+    getPrinters,
+    printText
+  }
 }
 ```
 
 ## 🖥️ Platform Support
 
 ### Windows
-- **Detection**: PowerShell + WMI
-- **Printing**: Notepad command / Copy command for ESC/POS
-- **Requirements**: Windows 7+, PowerShell enabled
+- **Detection**: PowerShell + WMI (`Get-WmiObject -Class Win32_Printer`)
+- **Printing**: 
+  - Text: Notepad command-line printing
+  - ESC/POS: Win32 Print Spooler API for raw printing
+- **Requirements**: Windows 7+, PowerShell enabled, Print Spooler service
+- **Printer Types**: All Windows-compatible printers
+
+```powershell
+# Verify Print Spooler service
+net start spooler
+
+# Check available printers
+Get-WmiObject -Class Win32_Printer | Select-Object Name, Default, Status
+```
 
 ### Linux
 - **Detection**: CUPS (`lpstat -a`)
-- **Printing**: CUPS (`lp -d <printer>`)
-- **Requirements**: CUPS service running
+- **Printing**: 
+  - Text: CUPS (`lp -d <printer>`)
+  - ESC/POS: CUPS with raw option (`lp -d <printer> -o raw`)
+- **Requirements**: CUPS service running, printer drivers installed
+- **Printer Types**: CUPS-supported printers, USB thermal printers
+
+```bash
+# Check CUPS service
+systemctl status cups
+sudo systemctl start cups
+
+# List available printers
+lpstat -a
+
+# Test printer
+echo "Test" | lp -d PrinterName
+```
 
 ### macOS
-- **Detection**: CUPS (`lpstat -a`)
-- **Printing**: CUPS (`lp -d <printer>`)
-- **Requirements**: CUPS (built-in)
+- **Detection**: Built-in CUPS (`lpstat -a`)
+- **Printing**: 
+  - Text: CUPS (`lp -d <printer>`)
+  - ESC/POS: CUPS with raw option
+- **Requirements**: macOS 10.9+, printer drivers installed
+- **Printer Types**: AirPrint, USB, network printers
 
-## 📱 Examples
+```bash
+# List printers
+lpstat -a
 
-### JavaScript/Vanilla JS
-
-```javascript
-const ws = new WebSocket('ws://localhost:8081/ws')
-
-ws.onopen = () => {
-  // Get printers
-  ws.send(JSON.stringify({ type: 'get_printers' }))
-}
-
-ws.onmessage = (event) => {
-  const message = JSON.parse(event.data)
-  
-  if (message.type === 'printers_list') {
-    console.log('Available printers:', message.payload)
-  }
-}
-
-// Print simple text
-function printText(printerName, content) {
-  ws.send(JSON.stringify({
-    type: 'print',
-    payload: {
-      printerName,
-      content,
-      jobId: 'job_' + Date.now()
-    }
-  }))
-}
+# System printer settings
+open "System Preferences" -b com.apple.preference.printfax
 ```
 
-### React Hook
-
-```javascript
-import { useState, useEffect, useRef } from 'react'
-
-export function usePrinterService() {
-  const [isConnected, setIsConnected] = useState(false)
-  const [printers, setPrinters] = useState([])
-  const wsRef = useRef(null)
-
-  useEffect(() => {
-    const connect = () => {
-      wsRef.current = new WebSocket('ws://localhost:8081/ws')
-      
-      wsRef.current.onopen = () => setIsConnected(true)
-      wsRef.current.onclose = () => setIsConnected(false)
-      wsRef.current.onmessage = (event) => {
-        const message = JSON.parse(event.data)
-        if (message.type === 'printers_list') {
-          setPrinters(message.payload)
-        }
-      }
-    }
-
-    connect()
-    return () => wsRef.current?.close()
-  }, [])
-
-  const sendMessage = (message) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(message))
-    }
-  }
-
-  const getPrinters = () => sendMessage({ type: 'get_printers' })
-  
-  const printText = (printerName, content) => {
-    sendMessage({
-      type: 'print',
-      payload: { printerName, content, jobId: Date.now() }
-    })
-  }
-
-  return { isConnected, printers, getPrinters, printText }
-}
-```
-
-## 🔧 Troubleshooting
+## 🛠️ Troubleshooting
 
 ### Common Issues
 
-#### 1. Connection Failed
-- **Check if service is running**: `http://localhost:8081/health`
-- **Verify port availability**: `lsof -i :8081` (Mac/Linux)
-- **Firewall**: Allow port 8081
+#### 1. Service Connection Failed
+
+```bash
+# Check if service is running
+curl http://localhost:8081/health
+# Expected response: "Printer service is running"
+
+# Verify port availability
+netstat -an | grep 8081
+lsof -i :8081  # Mac/Linux
+
+# Check firewall settings
+sudo ufw allow 8081  # Linux
+netsh firewall set portopening TCP 8081 "Printer Service"  # Windows
+```
 
 #### 2. No Printers Found
-- **Windows**: Check Print Spooler service
-- **Linux/Mac**: Verify CUPS: `systemctl status cups`
-- **Permissions**: Ensure user can access printers
+
+**Windows:**
+```powershell
+# Check Print Spooler service
+net start spooler
+Get-Service -Name Spooler
+
+# List printers via PowerShell
+Get-WmiObject -Class Win32_Printer | Select-Object Name, Status
+```
+
+**Linux/macOS:**
+```bash
+# Check CUPS service
+systemctl status cups
+sudo systemctl start cups
+
+# List available printers  
+lpstat -a
+lpstat -p  # Detailed printer status
+```
 
 #### 3. Print Jobs Fail
-- **Printer status**: Check if printer is online
-- **Driver issues**: Reinstall printer drivers
-- **Permissions**: Run service with appropriate permissions
 
-#### 4. ESC/POS Not Working
-- **Raw printing**: Ensure printer supports ESC/POS
-- **USB connection**: Direct USB connection works best
-- **Network printers**: May not support raw commands
+**General Debugging:**
+- Verify printer is online and has paper/ink
+- Test with system print dialog first
+- Check printer drivers are properly installed
+- Try different printer if available
 
-### Debug Mode
-
+**Check Logs:**
 ```bash
+# Enable debug mode
 DEBUG=true go run main.go
-```
-
-### Logs
-
-```bash
-# Save logs to file
-go run main.go > printer-service.log 2>&1
 
 # Monitor logs
-tail -f printer-service.log
+tail -f /var/log/cups/error_log  # Linux/macOS
+# Windows Event Viewer > Windows Logs > System
 ```
 
-## 🔒 Security Notes
+#### 4. ESC/POS Commands Not Working
 
-- **Local use only**: Service designed for localhost
-- **No authentication**: Add auth for production use
-- **CORS enabled**: All origins allowed (development)
-- **File permissions**: Service needs write access for temp files
+**Thermal Printer Issues:**
+- Ensure direct USB connection (not network)
+- Verify printer supports ESC/POS command set
+- Check printer manual for supported commands
+- Test with simple ESC/POS commands first:
 
-## 🤝 Contributing
+```bash
+# Test basic ESC/POS
+curl -X POST http://localhost:8081/api/print/escpos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "printerName": "Your-Thermal-Printer",
+    "rawData": "\\x1b@Test\\n\\x1b\\x69"
+  }'
+```
 
+#### 5. Permission Issues
+
+**Windows:**
+- Run service as Administrator if needed
+- Check UAC settings
+- Verify user has printer access
+
+**Linux/macOS:**
+```bash
+# Add user to printer groups
+sudo usermod -a -G lpadmin $USER
+sudo usermod -a -G lp $USER
+
+# Check printer permissions
+ls -la /dev/usb/lp*
+```
+
+### Performance Optimization
+
+#### Job Queue Tuning
+- Default queue size: 100 jobs
+- Job processing delay: 500ms between jobs
+- Modify in `main.go` if needed:
+
+```go
+queue: make(chan *PrintJobStatus, 200),  // Increase queue size
+time.Sleep(200 * time.Millisecond)       // Reduce delay
+```
+
+#### Memory Management
+- Large content (>1MB) may cause delays
+- Consider splitting large jobs
+- Monitor memory usage with system tools
+
+### Debug Commands
+
+```bash
+# Service health
+curl -v http://localhost:8081/health
+
+# List all endpoints
+curl -X OPTIONS http://localhost:8081/api/
+
+# Detailed printer info
+curl -s http://localhost:8081/api/printers | jq
+
+# Monitor job queue
+watch -n 2 'curl -s http://localhost:8081/api/jobs?limit=5 | jq'
+```
+
+## 📚 Advanced Usage
+
+### Production Deployment
+
+#### Build for Production
+
+```bash
+# Current platform
+go build -ldflags="-s -w" -o printer-service
+
+# Cross-platform builds
+GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o printer-service.exe
+GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o printer-service-linux  
+GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o printer-service-mac
+```
+
+#### Service Management
+
+**Windows Service (Optional):**
+```batch
+# Install as Windows service using NSSM
+nssm install PrinterService "C:\path\to\printer-service.exe"
+nssm set PrinterService DisplayName "Printer Service"
+nssm set PrinterService Description "Local printer service for web applications"
+nssm start PrinterService
+```
+
+**Linux Systemd:**
+```ini
+# /etc/systemd/system/printer-service.service
+[Unit]
+Description=Printer Service
+After=network.target
+
+[Service]
+Type=simple
+User=printer
+WorkingDirectory=/opt/printer-service
+ExecStart=/opt/printer-service/printer-service
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+# Enable and start service
+sudo systemctl enable printer-service
+sudo systemctl start printer-service
+sudo systemctl status printer-service
+```
+
+#### Security Configuration
+
+For production use, consider these security measures:
+
+```go
+// Example security middleware (add to main.go)
+func securityMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // CORS restrictions
+        allowedOrigins := []string{"http://localhost:3000", "https://yourdomain.com"}
+        origin := r.Header.Get("Origin")
+        
+        for _, allowed := range allowedOrigins {
+            if origin == allowed {
+                w.Header().Set("Access-Control-Allow-Origin", origin)
+                break
+            }
+        }
+        
+        // Rate limiting (implement with middleware)
+        // Authentication (implement as needed)
+        
+        next.ServeHTTP(w, r)
+    })
+}
+```
+
+### API Integration Patterns
+
+#### Polling Pattern for Job Status
+
+```javascript
+class JobMonitor {
+  constructor(baseUrl) {
+    this.baseUrl = baseUrl;
+  }
+
+  async waitForCompletion(jobId, timeout = 30000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+      const response = await fetch(`${this.baseUrl}/jobs/${jobId}`);
+      const data = await response.json();
+      
+      if (data.success && data.job) {
+        const { status, progress } = data.job;
+        
+        if (status === 'completed') {
+          return { success: true, job: data.job };
+        } else if (status === 'failed') {
+          return { success: false, error: data.job.error };
+        }
+        
+        // Report progress
+        this.onProgress?.(progress);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    return { success: false, error: 'Timeout waiting for job completion' };
+  }
+}
+
+// Usage
+const monitor = new JobMonitor('http://localhost:8081/api');
+monitor.onProgress = (progress) => console.log(`Progress: ${progress}%`);
+
+const result = await monitor.waitForCompletion(jobId);
+if (result.success) {
+  console.log('Print job completed successfully');
+} else {
+  console.error('Print job failed:', result.error);
+}
+```
+
+#### Batch Printing
+
+```javascript
+class BatchPrinter {
+  constructor(baseUrl) {
+    this.baseUrl = baseUrl;
+    this.maxConcurrent = 3;
+  }
+
+  async printBatch(printerName, items) {
+    const jobs = [];
+    const chunks = this.chunkArray(items, this.maxConcurrent);
+    
+    for (const chunk of chunks) {
+      const chunkJobs = await Promise.all(
+        chunk.map(item => this.printSingle(printerName, item))
+      );
+      jobs.push(...chunkJobs);
+      
+      // Small delay between batches
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    return jobs;
+  }
+
+  async printSingle(printerName, content) {
+    const response = await fetch(`${this.baseUrl}/print/text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ printerName, content })
+    });
+    
+    const data = await response.json();
+    return data.jobId;
+  }
+
+  chunkArray(array, size) {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+  }
+}
+```
+
+### Custom ESC/POS Utilities
+
+#### Receipt Builder Class
+
+```javascript
+class ReceiptBuilder {
+  constructor() {
+    this.commands = [];
+    this.width = 48;
+  }
+
+  init() {
+    this.commands.push('\\x1b@');
+    return this;
+  }
+
+  text(content, options = {}) {
+    if (options.bold) this.commands.push('\\x1b\\x45\\x01');
+    if (options.size === 'large') this.commands.push('\\x1b!\\x30');
+    if (options.align === 'center') this.commands.push('\\x1ba\\x01');
+    
+    this.commands.push(content);
+    
+    if (options.bold) this.commands.push('\\x1b\\x45\\x00');
+    if (options.size === 'large') this.commands.push('\\x1b!\\x00');
+    if (options.align) this.commands.push('\\x1ba\\x00');
+    
+    return this;
+  }
+
+  line() {
+    this.commands.push('\\n');
+    return this;
+  }
+
+  separator() {
+    this.commands.push('='.repeat(this.width) + '\\n');
+    return this;
+  }
+
+  table(rows) {
+    rows.forEach(row => {
+      const line = this.formatTableRow(row);
+      this.commands.push(line + '\\n');
+    });
+    return this;
+  }
+
+  formatTableRow(cells) {
+    const cellWidths = [20, 8, 12]; // Adjust as needed
+    return cells.map((cell, i) => {
+      const width = cellWidths[i] || 10;
+      return String(cell).padEnd(width).substring(0, width);
+    }).join('');
+  }
+
+  cut() {
+    this.commands.push('\\x1b\\x69');
+    return this;
+  }
+
+  build() {
+    return this.commands.join('');
+  }
+}
+
+// Usage
+const receipt = new ReceiptBuilder()
+  .init()
+  .text('TECH STORE', { bold: true, size: 'large', align: 'center' })
+  .line()
+  .text('123 Main Street', { align: 'center' })
+  .line()
+  .separator()
+  .table([
+    ['Item', 'Qty', 'Price'],
+    ['Laptop', '1', '$999.99'],
+    ['Mouse', '2', '$50.00']
+  ])
+  .separator()
+  .text('TOTAL: $1049.99', { bold: true, align: 'center' })
+  .line()
+  .text('Thank you!', { align: 'center' })
+  .cut()
+  .build();
+```
+
+## 🔒 Security & Best Practices
+
+### Development vs Production
+
+**Development Mode (Default):**
+- CORS allows all origins (`*`)
+- No authentication required
+- Debug logging enabled
+- All IPs accepted
+
+**Production Recommendations:**
+- Restrict CORS to specific domains
+- Implement API key authentication
+- Use HTTPS with reverse proxy
+- Enable rate limiting
+- Monitor and log access
+
+### Network Security
+
+```bash
+# Firewall configuration (Linux)
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp      # SSH
+sudo ufw allow 8081/tcp    # Printer service (local only)
+sudo ufw --force enable
+
+# For production, consider running behind reverse proxy
+# nginx configuration example:
+# location /printer/ {
+#     proxy_pass http://127.0.0.1:8081/;
+#     proxy_set_header Host $host;
+#     proxy_set_header X-Real-IP $remote_addr;
+# }
+```
+
+### Resource Limits
+
+```go
+// Example: Add to main.go for production
+func configureServer() *http.Server {
+    return &http.Server{
+        Addr:         ":8081",
+        Handler:      router,
+        ReadTimeout:  10 * time.Second,
+        WriteTimeout: 30 * time.Second,
+        IdleTimeout:  60 * time.Second,
+        MaxHeaderBytes: 1 << 20, // 1MB
+    }
+}
+```
+
+## 📞 Support & Contributing
+
+### Documentation & Examples
+- 📖 **Full API Documentation**: `API_DOCUMENTATION.md`
+- 🌐 **Test Interface**: `http://localhost:8081/`
+- 💾 **Source Code**: [GitHub Repository](https://github.com/Premod1/printer-service)
+- 🔗 **Laravel Integration**: [Laravel Print Gateway](https://github.com/Premod1/laravel-local-print-gateway)
+
+### Contributing
 1. Fork the repository
 2. Create feature branch: `git checkout -b feature/amazing-feature`
 3. Commit changes: `git commit -m 'Add amazing feature'`
 4. Push to branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
-## 📄 License
-
-MIT License - see LICENSE file for details.
-
-## 📞 Support
-
-- 📧 Create an issue in the repository
-- 📖 Check troubleshooting section above
-- 💡 Review examples and API documentation
+### License & Support
+- **License**: MIT License
+- **Issues**: Create GitHub issue with details
+- **Questions**: Check documentation and examples first
+- **Feature Requests**: Submit detailed GitHub issue
 
 ---
 
-**Last Updated**: November 24, 2025  
-**Version**: 1.0.0  
-**Vue.js Compatible**: ✅ Vue 3 + Composition API
+**Version**: 2.0.0  
+**Last Updated**: December 11, 2025  
+**Compatibility**: Go 1.21+, Windows 7+, macOS 10.9+, Linux (CUPS)  
+**API Versions**: REST API v1, WebSocket v1
