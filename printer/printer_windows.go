@@ -57,7 +57,7 @@ func PrintRawESCPOSWindows(printerName string, data []byte) error {
 		uintptr(0), // pDefault (NULL)
 	)
 	if ret == 0 {
-		return fmt.Errorf("OpenPrinterW failed for printer '%s': %v (Windows Error: %d)", 
+		return fmt.Errorf("OpenPrinterW failed for printer '%s': %v (Windows Error: %d)",
 			printerName, lastErr, lastErr)
 	}
 	defer func() {
