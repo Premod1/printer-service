@@ -51,13 +51,14 @@ func PrintRawESCPOSWindows(printerName string, data []byte) error {
 
 	// Step 1: Open printer with OpenPrinterW
 	var hPrinter uintptr
-	ret, _, err := openPrinterW.Call(
+	ret, _, lastErr := openPrinterW.Call(
 		uintptr(unsafe.Pointer(printerNameUTF16)),
 		uintptr(unsafe.Pointer(&hPrinter)),
 		uintptr(0), // pDefault (NULL)
 	)
 	if ret == 0 {
-		return fmt.Errorf("OpenPrinterW failed for printer '%s': %v", printerName, err)
+		return fmt.Errorf("OpenPrinterW failed for printer '%s': %v (Windows Error: %d)",
+			printerName, lastErr, lastErr)
 	}
 	defer func() {
 		// Always close printer handle
@@ -75,13 +76,13 @@ func PrintRawESCPOSWindows(printerName string, data []byte) error {
 	}
 
 	// Step 3: Start document with StartDocPrinterW
-	ret, _, err = startDocPrinterW.Call(
+	ret, _, lastErr = startDocPrinterW.Call(
 		hPrinter,
 		uintptr(1), // level
 		uintptr(unsafe.Pointer(&docInfo)),
 	)
 	if ret == 0 {
-		return fmt.Errorf("StartDocPrinterW failed: %v", err)
+		return fmt.Errorf("StartDocPrinterW failed: %v (Windows Error: %d)", lastErr, lastErr)
 	}
 	docID := ret
 	defer func() {
@@ -90,9 +91,9 @@ func PrintRawESCPOSWindows(printerName string, data []byte) error {
 	}()
 
 	// Step 4: Start page with StartPagePrinter
-	ret, _, err = startPagePrinter.Call(hPrinter)
+	ret, _, lastErr = startPagePrinter.Call(hPrinter)
 	if ret == 0 {
-		return fmt.Errorf("StartPagePrinter failed: %v", err)
+		return fmt.Errorf("StartPagePrinter failed: %v (Windows Error: %d)", lastErr, lastErr)
 	}
 	defer func() {
 		// Always end page
@@ -101,14 +102,14 @@ func PrintRawESCPOSWindows(printerName string, data []byte) error {
 
 	// Step 5: Write raw data with WritePrinter
 	var bytesWritten uint32
-	ret, _, err = writePrinter.Call(
+	ret, _, lastErr = writePrinter.Call(
 		hPrinter,
 		uintptr(unsafe.Pointer(&data[0])),      // pointer to data
 		uintptr(len(data)),                     // data length
 		uintptr(unsafe.Pointer(&bytesWritten)), // bytes written
 	)
 	if ret == 0 {
-		return fmt.Errorf("WritePrinter failed: %v", err)
+		return fmt.Errorf("WritePrinter failed: %v (Windows Error: %d)", lastErr, lastErr)
 	}
 
 	// Verify all bytes were written
