@@ -202,8 +202,39 @@ func PrintEscPos(printerName string, escPosData string) error {
 }
 
 func printEscPosWindows(printerName string, escPosData string) error {
-	// Use Win32 Print Spooler API for raw ESC/POS printing
-	return PrintRawESCPOSWindows(printerName, []byte(escPosData))
+	// Try Win32 Print Spooler API first for raw ESC/POS printing
+	err := PrintRawESCPOSWindows(printerName, []byte(escPosData))
+	if err != nil {
+		// Fallback: Try using copy command for raw printing
+		return printEscPosWindowsFallback(printerName, escPosData)
+	}
+	return nil
+}
+
+func printEscPosWindowsFallback(printerName string, escPosData string) error {
+	// Create temporary file with .prn extension for raw data
+	tempFile := "escpos_temp.prn"
+	err := os.WriteFile(tempFile, []byte(escPosData), 0644)
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(tempFile)
+
+	// Use copy command to send raw data to printer
+	// This is a fallback method that works with most printers
+	cmd := exec.Command("copy", "/B", tempFile, "\\\\"+printerName+"\\"+printerName)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// Try alternative copy method
+		cmd = exec.Command("copy", "/B", tempFile, printerName)
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to print via copy command: %v, output: %s", err, string(output))
+		}
+	}
+
+	fmt.Printf("ESC/POS print via copy command successful. Output: %s\n", string(output))
+	return nil
 }
 
 func printEscPosUnix(printerName string, escPosData string) error {
