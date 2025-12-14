@@ -1,5 +1,4 @@
 //go:build windows
-// +build windows
 
 package printer
 
@@ -7,11 +6,14 @@ import (
 	"fmt"
 	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 // Win32 Print Spooler API declarations for Windows
 var (
-	winspool         = syscall.NewLazyDLL("winspool.drv")
+	winspool = windows.NewLazyDLL("winspool.drv")
+
 	openPrinterW     = winspool.NewProc("OpenPrinterW")
 	startDocPrinterW = winspool.NewProc("StartDocPrinterW")
 	startPagePrinter = winspool.NewProc("StartPagePrinter")
@@ -37,7 +39,36 @@ func stringToUTF16Ptr(s string) (*uint16, error) {
 	return &utf16Slice[0], nil
 }
 
-// PrintRawESCPOSWindows prints raw ESC/POS bytes using Win32 Print Spooler API
+// PrintRawESCPOSWindows prints raw ESC/POS bytes using Win32 Print Spooler API.
+//
+// This function performs the following Win32 operations in sequence:
+// 1. OpenPrinterW - Opens the printer with UTF-16 name handling
+// 2. StartDocPrinterW - Starts print job with RAW datatype (no GDI processing)
+// 3. StartPagePrinter - Begins a new page
+// 4. WritePrinter - Writes raw ESC/POS bytes directly to printer
+// 5. EndPagePrinter - Ends the page
+// 6. EndDocPrinter - Ends the print job
+// 7. ClosePrinter - Closes the printer handle
+//
+// Example usage:
+//
+//	// ESC/POS commands: Initialize + Text + Paper Cut
+//	data := []byte{
+//	    0x1B, 0x40,                     // ESC @ - Initialize printer
+//	    'H', 'e', 'l', 'l', 'o', '!',   // Text content
+//	    0x0A,                           // Line feed
+//	    0x1D, 0x56, 0x42, 0x00,         // GS V B - Full paper cut
+//	}
+//	err := PrintRawESCPOSWindows("Your Printer Name", data)
+//
+// Parameters:
+//   - printerName: Windows printer name (supports Unicode/special characters)
+//   - data: Raw ESC/POS command bytes (not string - preserves binary data)
+//
+// Returns:
+//   - error: nil on success, descriptive error on failure with Windows error codes
+//
+// Note: Works with USB, Serial, Network POS printers. No temp files or shell commands used.
 func PrintRawESCPOSWindows(printerName string, data []byte) error {
 	if len(data) == 0 {
 		return fmt.Errorf("no data to print")
